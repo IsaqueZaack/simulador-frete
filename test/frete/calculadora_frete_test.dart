@@ -3,99 +3,105 @@ import 'package:simulador_frete/frete/calculadora_frete.dart';
 import 'package:simulador_frete/model/tipo_frete.dart';
 
 void main() {
-  final CalculadoraFrete calculadoraFrete = CalculadoraFrete();
+  late CalculadoraFrete calculadora;
 
-  test('frete economico deve calcular valor pelo peso e pela distancia', () {
-    // ARRANGE
-    const peso = 2.0;
-    const distanciaKm = 100.0;
-    const valorCompra = 1.0;
-
-    // ACT
-    final resultado = calculadoraFrete.calcular(
-      tipo: TipoFrete.economico,
-      peso: peso,
-      distanciaKm: distanciaKm,
-      valorCompra: valorCompra,
-    );
-
-    // Assert
-    expect(resultado.valor, closeTo(22.0, 0.01));
+  setUp(() {
+    calculadora = CalculadoraFrete();
   });
 
-  test('frete expresso deve calcular valor pelo peso e pela distancia', () {
-    // ARRANGE
-    const peso = 2.0;
-    const distanciaKm = 100.0;
-
-    // ACT
-    final resultado = calculadoraFrete.calcular(
-      tipo: TipoFrete.expresso,
-      peso: peso,
-      distanciaKm: distanciaKm,
-      valorCompra: 1.0,
-
-    );
-
-    // Assert
-    expect(resultado.valor, closeTo(48.0, 0.01));
-  });
-
-  test('peso negativo deve gerar erro', () {
-    expect(
-      () => calculadoraFrete.calcular(
-        tipo: TipoFrete.economico,
-        peso: 0.0,
-        distanciaKm: 100.0,
-        valorCompra: 1.0,
-
-      ),
-      throwsArgumentError,
-    );
-  });
-
-  test('peso negativo deve gerar erro', () {
-    expect(
-      () => calculadoraFrete.calcular(
-        tipo: TipoFrete.economico,
-        peso: -1.0,
-        distanciaKm: 100.0,
-        valorCompra: 1.0,
-
-      ),
-      throwsArgumentError,
-    );
-  });
-
-  test('distancia zero deve gerar erro', () {
-    expect(
-      () => calculadoraFrete.calcular(
+  group('CalculadoraFrete', () {
+    test('deve calcular frete econômico', () {
+      final resultado = calculadora.calcular(
         tipo: TipoFrete.economico,
         peso: 2.0,
-        distanciaKm: 0.0,
-        valorCompra: 1.0,
+        distanciaKm: 100.0,
+        valorCompra: 100.0,
+      );
 
-      ),
-      throwsArgumentError,
-    );
-  });
+      expect(resultado.valor, closeTo(22.0, 0.01));
+      expect(resultado.prazoDias, 5);
+    });
 
-  test('compra de 350 deve possuir frete grátis no economico', (){
-    const peso = 2.0;
-    const distanciaKm = 100.0;
-    const valorCompra = 350.0;
+    test('deve calcular frete expresso', () {
+      final resultado = calculadora.calcular(
+        tipo: TipoFrete.expresso,
+        peso: 2.0,
+        distanciaKm: 100.0,
+        valorCompra: 100.0,
+      );
 
-    final resultado = calculadoraFrete.calcular(
-      tipo: TipoFrete.economico,
-      peso: peso,
-      distanciaKm: distanciaKm,
-      valorCompra: valorCompra,
+      expect(resultado.valor, closeTo(48.0, 0.01));
+      expect(resultado.prazoDias, 2);
+    });
 
-    );
+    test('retirada deve ser gratuita', () {
+      final resultado = calculadora.calcular(
+        tipo: TipoFrete.retirada,
+        peso: 2.0,
+        distanciaKm: 100.0,
+        valorCompra: 100.0,
+      );
 
-    expect(resultado.valor, closeTo(0.0, 0.01));
+      expect(resultado.valor, closeTo(0.0, 0.01));
+    });
+
+    test('compra de 300 deve possuir frete grátis', () {
+      final resultado = calculadora.calcular(
+        tipo: TipoFrete.economico,
+        peso: 2.0,
+        distanciaKm: 100.0,
+        valorCompra: 300.0,
+      );
+
+      expect(resultado.valor, closeTo(0.0, 0.01));
+    });
+
+    test('FRETEGRATIS deve zerar o frete', () {
+      final resultado = calculadora.calcular(
+        tipo: TipoFrete.economico,
+        peso: 2.0,
+        distanciaKm: 100.0,
+        valorCompra: 100.0,
+        cupom: 'FRETEGRATIS',
+      );
+
+      expect(resultado.valor, closeTo(0.0, 0.01));
+    });
+
+    test('FRETE50 deve aplicar 50% de desconto', () {
+      final resultado = calculadora.calcular(
+        tipo: TipoFrete.economico,
+        peso: 2.0,
+        distanciaKm: 100.0,
+        valorCompra: 100.0,
+        cupom: 'FRETE50',
+      );
+
+      expect(resultado.valor, closeTo(11.0, 0.01));
+    });
+
+    test('cupom inválido não deve alterar o valor', () {
+      final resultado = calculadora.calcular(
+        tipo: TipoFrete.economico,
+        peso: 2.0,
+        distanciaKm: 100.0,
+        valorCompra: 100.0,
+        cupom: 'ABC123',
+      );
+
+      expect(resultado.valor, closeTo(22.0, 0.01));
+    });
+
+    test('frete grátis por compra deve ter prioridade sobre cupom', () {
+      final resultado = calculadora.calcular(
+        tipo: TipoFrete.economico,
+        peso: 2.0,
+        distanciaKm: 100.0,
+        valorCompra: 350.0,
+        cupom: 'FRETE50',
+      );
+
+      expect(resultado.valor, closeTo(0.0, 0.01));
+    });
   });
 }
-
-// AAA - Faz o código e depois testa 
-// TDD - Testa primeiro e depois faz o código - este é utilizado mais

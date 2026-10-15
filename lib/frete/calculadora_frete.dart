@@ -1,43 +1,47 @@
 import 'package:simulador_frete/model/resultado_frete.dart';
 import 'package:simulador_frete/model/tipo_frete.dart';
+import '../cupom/catalogo_cupons.dart';
+import 'strategy/frete_economico.dart';
+import 'strategy/frete_expresso.dart';
+import 'strategy/frete_strategy.dart';
+import 'strategy/retirada_loja.dart';
 
 class CalculadoraFrete {
   ResultadoFrete calcular({
     required TipoFrete tipo,
-    required double peso, required double distanciaKm, required double valorCompra,
+    required double peso,
+    required double distanciaKm,
+    required double valorCompra,
+    String cupom = '',
   }) {
+    final FreteStrategy strategy = switch (tipo) {
+      TipoFrete.economico => FreteEconomico(),
+      TipoFrete.expresso => FreteExpresso(),
+      TipoFrete.retirada => RetiradaLoja(),
+    };
 
-    late ResultadoFrete resultado;
+    final resultado = strategy.calcular(
+      peso: peso,
+      distanciaKm: distanciaKm,
+    );
 
-    if(peso <= 0) {
-      throw ArgumentError("O peso deve ser maior que zero.");
-    }
-    if(distanciaKm <= 0) {
-      throw ArgumentError("A distância deve ser maior que zero");
-    }
-    switch (tipo) {
-      case TipoFrete.economico:
-        resultado = ResultadoFrete(
-          valor: 8 + peso * 2 + distanciaKm * 0.1,
-          prazoDias: 5,
-        );
-      case TipoFrete.expresso:
-        resultado = ResultadoFrete(
-          valor: 15 + peso * 4 + distanciaKm * 0.25,
-          prazoDias: 2,
-        );
-      case TipoFrete.retirada:
-        resultado = ResultadoFrete(
-          valor: 0,
-          prazoDias: 1,
-        );
-    }
-
-    if(valorCompra >= 300.0) {
+    // Regra de maior prioridade.
+    if (valorCompra >= 300.0) {
       return resultado.copyWith(valor: 0.0);
-
     }
 
-    return resultado;
+    final cupomEncontrado = CatalogoCupons.buscar(cupom);
+
+    if (cupomEncontrado == null) {
+      return resultado;
+    }
+
+    final valorComDesconto = cupomEncontrado.aplicar(
+      resultado.valor,
+    );
+
+    return resultado.copyWith(
+      valor: valorComDesconto,
+    );
   }
 }
